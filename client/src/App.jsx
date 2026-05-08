@@ -4,6 +4,22 @@ import './App.css';
 function App() {
   const [text, setText] = useState('');
   const socketRef = useRef(null);
+  const [typing, setTyping] = useState(false);
+  const typingTimeoutRef = useRef(null);
+  const [theme, setTheme] = useState(() => {
+    try {
+      return localStorage.getItem('theme') || 'light';
+    } catch {
+      return 'light';
+    }
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme === 'dark' ? 'dark' : 'light');
+    try {
+      localStorage.setItem('theme', theme);
+    } catch {}
+  }, [theme]);
 
   useEffect(() => {
     const socket = new WebSocket('ws://localhost:5000');
@@ -37,6 +53,11 @@ function App() {
     const newText = event.target.value;
     setText(newText);
 
+    // mark as typing and debounce clearing the typing state
+    setTyping(true);
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => setTyping(false), 900);
+
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
       socketRef.current.send(JSON.stringify({ type: 'update', content: newText }));
     }
@@ -44,8 +65,28 @@ function App() {
 
   return (
     <div className="App">
-      <h1>Real-time Collaborative Text Editor</h1>
-      <textarea value={text} onChange={handleChange} rows={10} cols={80} />
+      <div className="project-top">
+        <div className="project-title">
+          <h1>Real-time Collaborative Text Editor</h1>
+          <div className="project-sub">A swagy, elegant editor demo</div>
+        </div>
+        <div>
+          <button
+            className="theme-toggle"
+            onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+            aria-label="Toggle theme"
+          >
+            {theme === 'dark' ? 'Light' : 'Dark'}
+          </button>
+        </div>
+      </div>
+
+      <textarea
+        className={typing ? 'typing' : ''}
+        value={text}
+        onChange={handleChange}
+        rows={10}
+      />
     </div>
   );
 }
